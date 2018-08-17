@@ -1,5 +1,6 @@
 package com.bignerdranch.android.geoquiz;
 
+import android.content.Intent;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -9,12 +10,16 @@ import android.widget.Toast;
 
 public class QuizActivity extends AppCompatActivity {
     private static final String KEY_INDEX = "index";
+    private static  final int REQUEST_CODE_CHEAT = 0;
 
     private Button mTrueButton;
     private Button mFalseButton;
+    private Button mCheatButton;
     private Button mNextButton;
     private Button mPreviousButton;
     private TextView mQuestionTextView;
+
+    private boolean mCheated;
 
     private Question[] mQuestionBank = new Question[] {
             new Question(R.string.question_australia, true),
@@ -44,6 +49,15 @@ public class QuizActivity extends AppCompatActivity {
         mQuestionTextView = findViewById(R.id.question_text_view);
         updateQuestion();
 
+        mCheatButton = (Button) findViewById(R.id.cheat_button);
+        mCheatButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                boolean answer_true = mQuestionBank[mCurrentQuestionIndex].isStatementTrue();
+                Intent intent = CheatActivity.newIntent(QuizActivity.this, answer_true);
+                startActivityForResult(intent, REQUEST_CODE_CHEAT);
+            }
+        });
 
         mTrueButton = (Button) findViewById(R.id.true_button);
         mTrueButton.setOnClickListener(new View.OnClickListener() {
@@ -71,6 +85,7 @@ public class QuizActivity extends AppCompatActivity {
                 }
                 mCurrentQuestionIndex = newIndex % mQuestionBank.length; //just in case
                 updateQuestion();
+                mCheated = false;
             }
         });
 
@@ -81,6 +96,7 @@ public class QuizActivity extends AppCompatActivity {
             public void onClick(View view) {
                 mCurrentQuestionIndex = (mCurrentQuestionIndex + 1) % mQuestionBank.length;
                 updateQuestion();
+                mCheated = false;
             }
         });
     }
@@ -91,10 +107,31 @@ public class QuizActivity extends AppCompatActivity {
     }
 
     private void checkAnswer(boolean userPressedTrue){
+        if (mCheated){
+            Toast.makeText(QuizActivity.this, R.string.judgement_toast, Toast.LENGTH_SHORT).show();
+            return;
+        }
+
         if (userPressedTrue == mQuestionBank[mCurrentQuestionIndex].isStatementTrue()){
             Toast.makeText(QuizActivity.this, R.string.correct_toast, Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(QuizActivity.this, R.string.incorrect_toast, Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (resultCode != RESULT_OK){
+            return;
+        }
+
+        if (requestCode == REQUEST_CODE_CHEAT){
+            if (data == null){
+                return;
+            }
+            mCheated = CheatActivity.wasAnswerShown(data);
         }
     }
 }
